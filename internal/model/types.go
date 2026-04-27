@@ -9,6 +9,22 @@ type PaginationResponse[T any] struct {
 	HasNextPage bool `json:"hasNextPage"`
 }
 
+type Contest struct {
+	ID                 string    `json:"id"`
+	Name               string    `json:"name"`
+	Description        *string   `json:"description"`
+	Reward             *string   `json:"reward"`
+	MaxTeamSize        int       `json:"maxTeamSize"`
+	MaxTeams           *int      `json:"maxTeams"`
+	StartDate          time.Time `json:"startDate"`
+	EndDate            time.Time `json:"endDate"`
+	SubmissionDeadline time.Time `json:"submissionDeadline"`
+	IsActive           bool      `json:"isActive"`
+	OrganizerID        string    `json:"organizerId"`
+	CreatedAt          time.Time `json:"createdAt"`
+	UpdatedAt          time.Time `json:"updatedAt"`
+}
+
 type Submission struct {
 	ID          string    `json:"id"`
 	TeamID      string    `json:"teamId"`

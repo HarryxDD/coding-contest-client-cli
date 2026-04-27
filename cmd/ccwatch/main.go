@@ -3,14 +3,11 @@ package main
 import (
 	"coding-contest-client-cli/internal/api"
 	"coding-contest-client-cli/internal/config"
-	"coding-contest-client-cli/internal/ui"
-	"coding-contest-client-cli/internal/watch"
-	"context"
+	"coding-contest-client-cli/internal/tui"
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/joho/godotenv"
 )
 
@@ -24,14 +21,11 @@ func main() {
 	}
 
 	client := api.New(cfg.BaseURL, cfg.APIPrefix, cfg.Token, cfg.Timeout)
-	renderer := ui.NewTerminalRenderer()
-	watcher := watch.New(client, renderer, cfg.ContestID, cfg.Interval, cfg.TopN)
+	app := tui.NewApp(cfg, client)
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer cancel()
-
-	if err := watcher.Run(ctx); err != nil {
-		fmt.Fprintf(os.Stderr, "watcher error: %v\n", err)
+	p := tea.NewProgram(app, tea.WithAltScreen())
+	if _, err := p.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "application error: %v\n", err)
 		os.Exit(1)
 	}
 }

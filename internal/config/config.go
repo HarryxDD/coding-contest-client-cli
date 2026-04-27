@@ -74,9 +74,6 @@ func (c Config) Validate() error {
 	if c.Token == "" {
 		return errors.New("token is required (use --token or CCS_TOKEN)")
 	}
-	if c.ContestID == "" {
-		return errors.New("contest ID is required (use --contest-id or CCS_CONTEST_ID)")
-	}
 	if c.Interval < time.Second {
 		return errors.New("interval must be >= 1s")
 	}

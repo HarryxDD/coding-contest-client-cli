@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"path"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 )
@@ -28,6 +28,10 @@ func New(baseURL, apiPrefix, token string, timeout time.Duration) *Client {
 	}
 }
 
+func (c *Client) GetContests() ([]model.Contest, error) {
+	return fetchAllPages[model.Contest](c, "/contests")
+}
+
 func (c *Client) GetSubmissions(contestID string) ([]model.Submission, error) {
 	endpoint := fmt.Sprintf("/contests/%s/submissions", contestID)
 	return fetchAllPages[model.Submission](c, endpoint)
@@ -39,7 +43,7 @@ func (c *Client) GetScores(submissionID string) ([]model.Score, error) {
 }
 
 func (c *Client) GetTeam(teamID string) (model.Team, error) {
- 	var team model.Team
+	var team model.Team
 	err := c.getJSON(fmt.Sprintf("/teams/%s", teamID), nil, &team)
 	return team, err
 }
