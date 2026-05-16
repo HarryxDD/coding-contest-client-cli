@@ -848,7 +848,7 @@ func (m appModel) renderLiveBoard() string {
 	}
 
 	lines = append(lines, "")
-	lines = append(lines, m.hintStyle.Render("j/k=select team, enter/d=drill-down, space=pause/resume, r=refresh, b=back, q=quit"))
+	lines = append(lines, m.hintStyle.Render("j/k=select team, enter/d=drill-down, r=refresh, b=back, q=quit"))
 
 	return m.formatContent(strings.Join(lines, "\n"), m.width, m.height)
 }
@@ -1043,12 +1043,12 @@ func (m appModel) updatePATManagement(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.patExpDays = ""
 		return m, nil
 
-	case "d":
-		if len(m.pats) > 0 && m.patCursor < len(m.pats) {
-			pat := m.pats[m.patCursor]
-			return m, m.deletePATCmd(pat.ID)
-		}
-		return m, nil
+	// case "d":
+	// 	if len(m.pats) > 0 && m.patCursor < len(m.pats) {
+	// 		pat := m.pats[m.patCursor]
+	// 		return m, m.deletePATCmd(pat.ID)
+	// 	}
+	// 	return m, nil
 
 	case "j", "down":
 		if len(m.pats) > 0 && m.patCursor < len(m.pats)-1 {
@@ -1062,11 +1062,11 @@ func (m appModel) updatePATManagement(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case "c":
-		if len(m.pats) > 0 && m.patCursor < len(m.pats) {
-			m.errorText = fmt.Sprintf("PAT token: %s (copy manually)", m.pats[m.patCursor].Token)
-		}
-		return m, nil
+	// case "c":
+	// 	if len(m.pats) > 0 && m.patCursor < len(m.pats) {
+	// 		m.errorText = fmt.Sprintf("PAT token: %s (copy manually)", m.pats[m.patCursor].Token)
+	// 	}
+	// 	return m, nil
 
 	case "r":
 		m.loading = true
@@ -1142,7 +1142,7 @@ func (m appModel) renderPATManagement() string {
 	}
 
 	lines = append(lines, "")
-	lines = append(lines, m.hintStyle.Render("j/k=nav, n=new, d=delete, c=copy token, r=refresh, b=back, q=quit"))
+	lines = append(lines, m.hintStyle.Render("j/k=nav, n=new, r=refresh, b=back, q=quit"))
 
 	return m.formatContent(strings.Join(lines, "\n"), m.width, m.height)
 }
