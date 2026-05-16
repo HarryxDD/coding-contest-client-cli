@@ -40,6 +40,16 @@ go mod tidy
 cp .env.example .env
 ```
 
+## Quality checks
+
+```bash
+make lint
+make test
+```
+
+- `make lint` checks formatting with `gofmt` and runs `go vet`
+- `make test` runs the unit test suite
+
 ## Running
 
 go run ./cmd/ccwatch \
