@@ -32,9 +32,41 @@ func (c *Client) GetContests() ([]model.Contest, error) {
 	return fetchAllPages[model.Contest](c, "/contests")
 }
 
+func (c *Client) GetContestsPage(page, limit int, filters map[string]string) (model.PaginationResponse[model.Contest], error) {
+	query := url.Values{}
+	query.Set("page", fmt.Sprintf("%d", page))
+	query.Set("limit", fmt.Sprintf("%d", limit))
+	if filters != nil {
+		b, err := json.Marshal(filters)
+		if err == nil {
+			query.Set("filters", string(b))
+		}
+	}
+
+	var resp model.PaginationResponse[model.Contest]
+	if err := c.getJSON("/contests", query, &resp); err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
 func (c *Client) GetSubmissions(contestID string) ([]model.Submission, error) {
 	endpoint := fmt.Sprintf("/contests/%s/submissions", contestID)
 	return fetchAllPages[model.Submission](c, endpoint)
+}
+
+func (c *Client) GetSubmissionsByTeam(contestID, teamID string) ([]model.Submission, error) {
+	endpoint := fmt.Sprintf("/contests/%s/submissions", contestID)
+	filters := map[string]string{
+		"teamId": teamID,
+	}
+	return fetchAllPagesWithFilters[model.Submission](c, endpoint, filters)
+}
+
+func (c *Client) GetSubmission(contestID, submissionID string) (model.Submission, error) {
+	var sub model.Submission
+	err := c.getJSON(fmt.Sprintf("/contests/%s/submissions/%s", contestID, submissionID), nil, &sub)
+	return sub, err
 }
 
 func (c *Client) GetScores(submissionID string) ([]model.Score, error) {
@@ -49,6 +81,10 @@ func (c *Client) GetTeam(teamID string) (model.Team, error) {
 }
 
 func fetchAllPages[T any](c *Client, endpoint string) ([]T, error) {
+	return fetchAllPagesWithFilters[T](c, endpoint, nil)
+}
+
+func fetchAllPagesWithFilters[T any](c *Client, endpoint string, filters map[string]string) ([]T, error) {
 	all := make([]T, 0, 50)
 	page := 1
 
@@ -56,6 +92,12 @@ func fetchAllPages[T any](c *Client, endpoint string) ([]T, error) {
 		query := url.Values{}
 		query.Set("page", fmt.Sprintf("%d", page))
 		query.Set("limit", "50")
+		if filters != nil {
+			b, err := json.Marshal(filters)
+			if err == nil {
+				query.Set("filters", string(b))
+			}
+		}
 
 		var resp model.PaginationResponse[T]
 		if err := c.getJSON(endpoint, query, &resp); err != nil {

@@ -71,9 +71,6 @@ func (c Config) Validate() error {
 	if c.APIPrefix == "" {
 		return errors.New("api prefix is required")
 	}
-	if c.Token == "" {
-		return errors.New("token is required (use --token or CCS_TOKEN)")
-	}
 	if c.Interval < time.Second {
 		return errors.New("interval must be >= 1s")
 	}

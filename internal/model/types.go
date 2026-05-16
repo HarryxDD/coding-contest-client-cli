@@ -78,3 +78,16 @@ type RowDelta struct {
 	OldScore float64
 	NewScore float64
 }
+
+type SubmissionDetail struct {
+	ID          string
+	TeamID      string
+	ContestID   string
+	Title       string
+	Description *string
+	Status      string
+	SubmittedAt time.Time
+	UpdatedAt   time.Time
+	Scores      []Score
+	TotalScore  float64
+}
