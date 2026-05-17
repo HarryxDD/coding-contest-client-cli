@@ -33,6 +33,7 @@ All other code in this repository was implemented from scratch for the project.
 | GET | `/contests/{contestId}/submissions/{submissionId}` | Load a single submission with metadata |
 | GET | `/submissions/{submissionId}/scores` | Load all scores for a submission |
 | GET | `/teams/{teamId}` | Resolve readable team names |
+| GET | `/pat` | Load all personal access tokens |
 
 All requests use `Authorization: Bearer <JWT or PAT>`.
 
@@ -58,11 +59,11 @@ The client accepts CLI flags and environment variables.
 
 Environment variables:
 
-- `CCS_BASE_URL` — API server URL
-- `CCS_API_PREFIX` — API path prefix, default: `/api`
-- `CCS_INTERVAL` — polling interval, default: `8s`
-- `CCS_TIMEOUT` — request timeout, default: `20s`
-- `CCS_TOP_N` — leaderboard size, default: `10`
+- `CCS_BASE_URL`: API server URL
+- `CCS_API_PREFIX`: API path prefix, default: `/api`
+- `CCS_INTERVAL`: polling interval, default: `8s`
+- `CCS_TIMEOUT`: request timeout, default: `20s`
+- `CCS_TOP_N`: leaderboard size, default: `10`
 
 CLI flags override environment variables.
 
@@ -72,8 +73,6 @@ CLI flags override environment variables.
 go run ./cmd/ccwatch \
   --base-url http://localhost:3000 \
   --api-prefix /api \
-  --token YOUR_TOKEN \
-  --contest-id YOUR_CONTEST_UUID \
   --interval 8s \
   --timeout 20s \
   --top 10
