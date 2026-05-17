@@ -3,6 +3,7 @@ module coding-contest-client-cli
 go 1.23.0
 
 require (
+	github.com/atotto/clipboard v0.1.4
 	github.com/charmbracelet/bubbletea v1.3.4
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/fatih/color v1.18.0

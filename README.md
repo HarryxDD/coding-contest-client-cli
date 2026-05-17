@@ -33,6 +33,10 @@ All other code in this repository was implemented from scratch for the project.
 | GET | `/contests/{contestId}/submissions/{submissionId}` | Load a single submission with metadata |
 | GET | `/submissions/{submissionId}/scores` | Load all scores for a submission |
 | GET | `/teams/{teamId}` | Resolve readable team names |
+| POST | `/auth/login` | Authenticate user and obtain JWT |
+| GET | `/pat` | List personal access tokens for the current user |
+| POST | `/pat` | Create a new personal access token |
+| DELETE | `/pat/{id}` | Revoke / delete a personal access token |
 | GET | `/pat` | Load all personal access tokens |
 
 All requests use `Authorization: Bearer <JWT or PAT>`.

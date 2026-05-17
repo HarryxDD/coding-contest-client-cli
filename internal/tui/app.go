@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/atotto/clipboard"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -55,6 +57,11 @@ type submissionDetailLoadedMsg struct {
 type patsLoadedMsg struct {
 	PATs []auth.PAT
 	Err  error
+}
+
+type patCreatedMsg struct {
+	Token string
+	Err   error
 }
 
 type loginSuccessMsg struct {
@@ -327,6 +334,26 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.errorText = "login failed"
 		}
 		return m, nil
+
+	case patCreatedMsg:
+		m.loading = false
+		if typed.Err != nil {
+			m.errorText = typed.Err.Error()
+			return m, nil
+		}
+		m.errorText = "PAT created and copied to clipboard"
+		// reload PATs to show the new token entry (token itself is only returned at creation)
+		return m, m.loadPATsCmd()
+
+	case patsDeletedMsg:
+		m.loading = false
+		if typed.Err != nil {
+			m.errorText = typed.Err.Error()
+			return m, nil
+		}
+		m.errorText = "PAT deleted"
+		// reload list to reflect deletion
+		return m, m.loadPATsCmd()
 
 	case time.Time:
 		if m.currentScreen == screenLiveBoard && m.watching {
@@ -1043,12 +1070,14 @@ func (m appModel) updatePATManagement(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.patExpDays = ""
 		return m, nil
 
-	// case "d":
-	// 	if len(m.pats) > 0 && m.patCursor < len(m.pats) {
-	// 		pat := m.pats[m.patCursor]
-	// 		return m, m.deletePATCmd(pat.ID)
-	// 	}
-	// 	return m, nil
+	case "d":
+		if len(m.pats) > 0 && m.patCursor < len(m.pats) {
+			pat := m.pats[m.patCursor]
+			m.loading = true
+			m.errorText = ""
+			return m, m.deletePATCmd(pat.ID)
+		}
+		return m, nil
 
 	case "j", "down":
 		if len(m.pats) > 0 && m.patCursor < len(m.pats)-1 {
@@ -1064,7 +1093,17 @@ func (m appModel) updatePATManagement(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// case "c":
 	// 	if len(m.pats) > 0 && m.patCursor < len(m.pats) {
-	// 		m.errorText = fmt.Sprintf("PAT token: %s (copy manually)", m.pats[m.patCursor].Token)
+	// 		token := m.pats[m.patCursor].Token
+	// 		if token == "" {
+	// 			m.errorText = "PAT has no token available"
+	// 			return m, nil
+	// 		}
+	// 		if err := clipboard.WriteAll(token); err != nil {
+	// 			// Fallback: instruct manual copy
+	// 			m.errorText = fmt.Sprintf("Failed to copy to clipboard: %v — token: %s", err, token)
+	// 			return m, nil
+	// 		}
+	// 		m.errorText = "PAT token copied to clipboard"
 	// 	}
 	// 	return m, nil
 
@@ -1112,7 +1151,8 @@ func (m appModel) renderPATManagement() string {
 		return m.formatContent(strings.Join(lines, "\n"), m.width, m.height)
 	}
 
-	lines = append(lines, m.headerStyle.Render("Your PATs:"))
+	lines = append(lines, m.headerStyle.Render("Your PATs"))
+	lines = append(lines, m.hintStyle.Render("Newly created PAT will be copied to clipboard"))
 	lines = append(lines, "")
 
 	shown := 0
@@ -1142,7 +1182,7 @@ func (m appModel) renderPATManagement() string {
 	}
 
 	lines = append(lines, "")
-	lines = append(lines, m.hintStyle.Render("j/k=nav, n=new, r=refresh, b=back, q=quit"))
+	lines = append(lines, m.hintStyle.Render("j/k=nav, n=new, d=delete, r=refresh, b=back, q=quit"))
 
 	return m.formatContent(strings.Join(lines, "\n"), m.width, m.height)
 }
@@ -1250,14 +1290,17 @@ func (m appModel) loadPATsCmd() tea.Cmd {
 func (m appModel) createPATCmd(name string, expDays int) tea.Cmd {
 	token, baseURL, apiPrefix := m.sessionToken, m.cfg.BaseURL, m.cfg.APIPrefix
 	return func() tea.Msg {
-		_, err := auth.CreatePAT(baseURL, apiPrefix, token, name, expDays)
+		pat, err := auth.CreatePAT(baseURL, apiPrefix, token, name, expDays)
 		if err != nil {
-			return patsLoadedMsg{PATs: nil, Err: err}
+			return patCreatedMsg{Token: "", Err: err}
 		}
 
-		// Reload PATs list
-		pats, err := auth.GetPATs(baseURL, apiPrefix, token)
-		return patsLoadedMsg{PATs: pats, Err: err}
+		// try to copy token to clipboard; best-effort
+		if pat != nil && pat.Token != "" {
+			_ = clipboard.WriteAll(pat.Token)
+		}
+
+		return patCreatedMsg{Token: pat.Token, Err: nil}
 	}
 }
 
