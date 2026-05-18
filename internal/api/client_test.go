@@ -79,3 +79,43 @@ func TestGetSubmissionAndScores(t *testing.T) {
 		t.Fatalf("unexpected scores %+v", scores)
 	}
 }
+
+func TestUpdateContest(t *testing.T) {
+	t.Parallel()
+
+	var gotMethod, gotPath, gotAuth, gotContentType string
+	var gotBody map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		gotAuth = r.Header.Get("Authorization")
+		gotContentType = r.Header.Get("Content-Type")
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		_ = json.NewEncoder(w).Encode(model.Contest{ID: "contest-1", Name: "Renamed Contest"})
+	}))
+	defer server.Close()
+
+	client := New(server.URL, "/api", "token-123", time.Second)
+	contest, err := client.UpdateContest("contest-1", map[string]any{"name": "Renamed Contest"})
+	if err != nil {
+		t.Fatalf("UpdateContest() error = %v", err)
+	}
+	if gotMethod != http.MethodPatch {
+		t.Fatalf("unexpected method %q", gotMethod)
+	}
+	if gotPath != "/api/contests/contest-1" {
+		t.Fatalf("unexpected path %q", gotPath)
+	}
+	if gotAuth != "Bearer token-123" {
+		t.Fatalf("unexpected auth header %q", gotAuth)
+	}
+	if gotContentType != "application/json" {
+		t.Fatalf("unexpected content type %q", gotContentType)
+	}
+	if gotBody["name"] != "Renamed Contest" {
+		t.Fatalf("unexpected body %+v", gotBody)
+	}
+	if contest.Name != "Renamed Contest" {
+		t.Fatalf("unexpected contest %+v", contest)
+	}
+}

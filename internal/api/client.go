@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"coding-contest-client-cli/internal/model"
 	"encoding/json"
 	"fmt"
@@ -80,6 +81,13 @@ func (c *Client) GetTeam(teamID string) (model.Team, error) {
 	return team, err
 }
 
+func (c *Client) UpdateContest(contestID string, payload map[string]any) (model.Contest, error) {
+	var contest model.Contest
+	endpoint := fmt.Sprintf("/contests/%s", contestID)
+	err := c.patchJSON(endpoint, payload, &contest)
+	return contest, err
+}
+
 func fetchAllPages[T any](c *Client, endpoint string) ([]T, error) {
 	return fetchAllPagesWithFilters[T](c, endpoint, nil)
 }
@@ -115,20 +123,42 @@ func fetchAllPagesWithFilters[T any](c *Client, endpoint string, filters map[str
 }
 
 func (c *Client) getJSON(endpoint string, query url.Values, out any) error {
+	return c.requestJSON(http.MethodGet, endpoint, query, nil, out)
+}
+
+func (c *Client) patchJSON(endpoint string, body any, out any) error {
+	return c.requestJSON(http.MethodPatch, endpoint, nil, body, out)
+}
+
+func (c *Client) requestJSON(method, endpoint string, query url.Values, body any, out any) error {
 	u, err := url.Parse(c.baseURL)
 	if err != nil {
 		return fmt.Errorf("invalid base URL: %w", err)
 	}
 
 	u.Path = path.Join(u.Path, c.apiPrefix, endpoint)
-	u.RawQuery = query.Encode()
+	if query != nil {
+		u.RawQuery = query.Encode()
+	}
 
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	var reader io.Reader
+	if body != nil {
+		payload, err := json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("marshal request body failed: %w", err)
+		}
+		reader = bytes.NewReader(payload)
+	}
+
+	req, err := http.NewRequest(method, u.String(), reader)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.token)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 
 	res, err := c.http.Do(req)
 	if err != nil {
@@ -136,14 +166,14 @@ func (c *Client) getJSON(endpoint string, query url.Values, out any) error {
 	}
 	defer res.Body.Close()
 
-	body, _ := io.ReadAll(res.Body)
+	respBody, _ := io.ReadAll(res.Body)
 
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return fmt.Errorf("api error %d: %s", res.StatusCode, strings.TrimSpace(string(body)))
+		return fmt.Errorf("api error %d: %s", res.StatusCode, strings.TrimSpace(string(respBody)))
 	}
 
-	if err := json.Unmarshal(body, out); err != nil {
-		return fmt.Errorf("decode response failed: %w; body=%s", err, string(body))
+	if err := json.Unmarshal(respBody, out); err != nil {
+		return fmt.Errorf("decode response failed: %w; body=%s", err, string(respBody))
 	}
 
 	return nil

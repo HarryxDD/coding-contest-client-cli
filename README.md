@@ -9,6 +9,7 @@ It watches one contest continuously, polls API data, computes live leaderboard u
 This client is built for contest organizers and participants who need a live view of contest progress without a browser. It provides:
 
 - contest browsing and contest details
+- contest rename for organizers/admins
 - live leaderboard updates
 - submission drill-down with score details
 - PAT management for non-interactive access
@@ -31,6 +32,7 @@ All other code in this repository was implemented from scratch for the project.
 | GET | `/contests` | Load available contests |
 | GET | `/contests/{contestId}/submissions` | Load all submissions in a contest |
 | GET | `/contests/{contestId}/submissions/{submissionId}` | Load a single submission with metadata |
+| PATCH | `/contests/{contestId}` | Update contest fields such as the contest name |
 | GET | `/submissions/{submissionId}/scores` | Load all scores for a submission |
 | GET | `/teams/{teamId}` | Resolve readable team names |
 | POST | `/auth/login` | Authenticate user and obtain JWT |

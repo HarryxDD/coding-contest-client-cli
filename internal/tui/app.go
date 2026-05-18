@@ -77,6 +77,11 @@ type patsDeletedMsg struct {
 	Err error
 }
 
+type contestUpdatedMsg struct {
+	Contest model.Contest
+	Err     error
+}
+
 // App model holds all state
 type appModel struct {
 	// Config
@@ -109,6 +114,10 @@ type appModel struct {
 	selected     *model.Contest
 	selectedTeam *model.LeaderboardRow
 	selectedPAT  *auth.PAT
+
+	// Contest edit state
+	contestRenameMode bool
+	contestRenameName string
 
 	// Leaderboard state
 	loading           bool
@@ -333,6 +342,19 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.errorText = "login failed"
 		}
+		return m, nil
+
+	case contestUpdatedMsg:
+		m.loading = false
+		if typed.Err != nil {
+			m.errorText = typed.Err.Error()
+			return m, nil
+		}
+		m.errorText = "Contest updated"
+		m.contestRenameMode = false
+		m.contestRenameName = ""
+		m.selected = &typed.Contest
+		m = m.syncContest(typed.Contest)
 		return m, nil
 
 	case patCreatedMsg:
@@ -681,10 +703,52 @@ func (m appModel) renderContestList() string {
 // ============ Contest Info Screen ============
 
 func (m appModel) updateContestInfo(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.contestRenameMode {
+		switch msg.String() {
+		case "esc", "b":
+			m.contestRenameMode = false
+			m.contestRenameName = ""
+			m.errorText = ""
+			return m, nil
+		case "backspace":
+			if len(m.contestRenameName) > 0 {
+				m.contestRenameName = m.contestRenameName[:len(m.contestRenameName)-1]
+			}
+			return m, nil
+		case "enter":
+			if m.selected == nil {
+				return m, nil
+			}
+			name := strings.TrimSpace(m.contestRenameName)
+			if name == "" {
+				m.errorText = "contest name cannot be empty"
+				return m, nil
+			}
+			m.contestRenameMode = false
+			m.contestRenameName = name
+			m.loading = true
+			m.errorText = ""
+			return m, m.updateContestCmd(m.selected.ID, name)
+		default:
+			if len(msg.String()) == 1 && msg.String() >= " " && msg.String() < "\x7f" {
+				m.contestRenameName += msg.String()
+			}
+			return m, nil
+		}
+	}
+
 	switch msg.String() {
 	case "b", "esc":
 		m.currentScreen = screenContestList
 		m.selected = nil
+		m.errorText = ""
+		return m, nil
+	case "e":
+		if m.selected == nil {
+			return m, nil
+		}
+		m.contestRenameMode = true
+		m.contestRenameName = m.selected.Name
 		m.errorText = ""
 		return m, nil
 	case "enter", "w":
@@ -741,12 +805,27 @@ func (m appModel) renderContestInfo() string {
 		fmt.Sprintf("End: %s", contest.EndDate.Format("2006-01-02 15:04")),
 	)
 
-	if m.errorText != "" {
-		lines = append(lines, "", m.errorStyle.Render("Error: "+m.errorText))
+	// if m.errorText != "" {
+	// 	lines = append(lines, "", m.errorStyle.Render("Error: "+m.errorText))
+	// }
+
+	if m.loading {
+		lines = append(lines, "", m.mutedStyle.Render("Updating contest..."))
+	}
+
+	if m.contestRenameMode {
+		lines = append(lines,
+			"",
+			m.headerStyle.Render("Rename Contest"),
+			fmt.Sprintf("Name: %s", m.activeStyle.Render(m.contestRenameName+" ")),
+			"",
+			m.hintStyle.Render("Enter = save, Esc/b = cancel"),
+		)
+		return m.formatContent(strings.Join(lines, "\n"), m.width, m.height)
 	}
 
 	lines = append(lines, "")
-	lines = append(lines, m.hintStyle.Render("Enter/w = watch live, b/esc = back, q = quit"))
+	lines = append(lines, m.hintStyle.Render("Enter/w = watch live, e = rename, b/esc = back, q = quit"))
 
 	return m.formatContent(strings.Join(lines, "\n"), m.width, m.height)
 }
@@ -1279,6 +1358,17 @@ func (m appModel) loadSubmissionDetailCmd(contestID, submissionID string) tea.Cm
 	}
 }
 
+func (m appModel) updateContestCmd(contestID, name string) tea.Cmd {
+	client := m.client
+	return func() tea.Msg {
+		contest, err := client.UpdateContest(contestID, map[string]any{"name": name})
+		if err != nil {
+			return contestUpdatedMsg{Err: err}
+		}
+		return contestUpdatedMsg{Contest: contest, Err: nil}
+	}
+}
+
 func (m appModel) loadPATsCmd() tea.Cmd {
 	token, baseURL, apiPrefix := m.sessionToken, m.cfg.BaseURL, m.cfg.APIPrefix
 	return func() tea.Msg {
@@ -1380,6 +1470,23 @@ func shortID(value string) string {
 		return value
 	}
 	return value[:8]
+}
+
+func (m appModel) syncContest(updated model.Contest) appModel {
+	for i := range m.contests {
+		if m.contests[i].ID == updated.ID {
+			m.contests[i] = updated
+		}
+	}
+	for i := range m.filteredContests {
+		if m.filteredContests[i].ID == updated.ID {
+			m.filteredContests[i] = updated
+		}
+	}
+	if m.selected != nil && m.selected.ID == updated.ID {
+		m.selected = &updated
+	}
+	return m
 }
 
 // centerContent centers text in available width
